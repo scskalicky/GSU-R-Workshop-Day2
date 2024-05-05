@@ -14,40 +14,4 @@ As such there are two main analyses:
 
 We answered both questions using *logistic regression*, which determines the probability of a binary outcome (yes/no, accurate/innacurate, etc) based on independent variables (modality, pre/post, etc.).
 
-## The Priming Data
-
-The priming data is in the file `sp-priming.csv`, with these columns and variables:
-
-variable|type|explanation
-:-:|:-:|:-:
-`score`|dependent variable| whether participant produced the target structure (1) or not (0)
-`type` | independent variable | the trial type, whether it was a prime (containing a stranded preposition) or control (no stranded preposition)
-`modality` | independent variable | whether participant was in an FTF or SCMC context
-`wmc` | independent variable | particpant's working memory capacity score 
-`prod_pre` | independent variable | participant's pretest production score (production test)
-`rec_pre` | independent variable | participant's receptive knowledge score (GJT)
-`cloze` | independent variable | participant's proficiency score (cloze test)
-`test` | control variable | test version (A or B, for counterbalancing)
-`session` | control variable | first or second alignment session
-`trial_order` |control variable| order of the questions within any one alignment session
-`subject` | random effect | random intercept fit for each subject
-`verb`| random effect | random intercept fit for each alignment trial (each trial had a unique verb)
-
-## The Production Data
-
-The production data is in the file `sp-production.csv`, with these columns and variables:
-
-variable|type|explanation
-:-:|:-:|:-:
-`score`|dependent variable| whether participant produced the target structure (1) or not (0)
-`priming_amount` | independent variable | the total number of trials where participant produced a stranded preposition after a prime trial during both alignment sessions
-`group` | independent variable | whether participant was in `control` condition (no alignment sessions) or `exp` condition (completed alignment sessions)
-`modality` | independent variable | whether participant was in an FTF or SCMC context
-`time` | independent variable | test order: pretest, immediate posttest, delayed posttest
-`wmc` | independent variable | particpant's working memory capacity score 
-`rec_pre` | independent variable | participant's receptive knowledge score (GJT)
-`cloze` | independent variable | participant's proficiency score (cloze test)
-`test` | control variable | test version (1, 2, or 3, for counterbalancing)
-`trial_order` |control variable| order of the questions within any one production test session
-`subject` | random effect | random intercept fit for each subject
-`verb`| random effect | random intercept fit for each test question (each question had a unique verb)
+These anlayses are split over the two analysis folders in this repository. 
