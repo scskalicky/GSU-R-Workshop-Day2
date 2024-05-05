@@ -7,7 +7,7 @@ This workshp works through data used in [Kim et al. (2019)](https://doi.org/10.1
 
 This research compared the degree of **primed production** of English stranded prepositions among Korean learners of English. Learners completed an alignment session, where half of their input trials included a stranded preposition, and half did not. After each trial, we assessed whether the participants produced (or did not produce) a stranded preposition. If a participant produced a stranded preposition after an input trial containing a stranded preposition, this was taken as evidence of alignment. We also measured the degree of **learning** of stranded prepositions from the alignment sessions using a pre/immediate/delayed posttest design. These two questions are further nested within a comparison of **modality**: half of the participants completed the alignment session in a face-to-fact (FTF) context, whereas the other half completed the session in a synchronous computer-mediated context (SCMC). A separate control condition only completed the pre/immediate/delayed posttests and did not participate in the alignment sessions. 
 
-As such there are two main analyses: \
+As such there are two main analyses: 
 
     1. What is the degree of linguistic alignment, and are there differences between FTF/SCMC modality?
     2. Does the alignment session lead to learning of stranded prepositions, and are there differences between FTF/SCMC modality?
@@ -51,16 +51,3 @@ variable|type|explanation
 `trial_order` |control variable| order of the questions within any one production test session
 `subject` | random effect | random intercept fit for each subject
 `verb`| random effect | random intercept fit for each test question (each question had a unique verb)
-
-
-```
-priming.model.full.interactions.m <- 
-glmer(binary_score~Modality*Type+trial_order*Type+Session*Type+Cloze*Type+WMC*Type+prod_pre*Type+rec_pre_1_2*Type + 
-
-(1+Type|subject)+(1|verb),a,family="binomial"(link="logit"),glmerControl(optimizer = "bobyqa",optCtrl=list(maxfun = 100000)))`
-```
-
-```
-A total of 18 prime-target pairs and 18 filler pairs were used in alignment sessions 1 and 2, for a total of 36 trials per session (72 trials per student for both sessions).
-```
-
