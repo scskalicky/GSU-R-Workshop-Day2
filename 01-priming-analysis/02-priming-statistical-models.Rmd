@@ -1,0 +1,406 @@
+---
+title: "priming-statistical-model"
+author: "Stephen Skalicky"
+date: "2024-05-06"
+output: html_document
+---
+
+# Logistic regression predicting priming
+
+The first statistical model uses a logistic regression. In this notebook, we walk through how to fit such a model, how to determine significance of added effects, and how to plot the interaction among both categorical and continuous variables. 
+
+# Load in libraries
+
+- `tidyverse` for data manipulation and loading
+- `lme4` to construct regression models
+- `emmeans` to decompose fit models
+- `performance` to assess model fit
+
+```{r}
+library(tidyverse)
+library(lme4)
+library(emmeans)
+library(performance)
+```
+
+# Load in the data
+Its the same file as before, with a new name. We didn't need to clean anything. 
+
+```{r}
+model_dat <- read_csv('sp-priming.csv')
+```
+# Construct a basic model with one predictor and two random effects
+
+The syntax for a logistic model is the same as a continuous model. There are some differences however:
+
+`glmer` is for logistic
+`lmer` is for continuous
+
+With `glmer`, you must also specify the distribution family and provide a link function. This is how the model will understand the distribution of the data and use a logit scale to make predictions. 
+
+
+Below is a basic model fit to predict score by trial type. There is also a random intercept of subject and verb.
+
+```{r}
+m1 <- glmer(score ~ trial_type + (1|subject) + (1|verb), data = model_dat, family = binomial(link = 'logit'))
+```
+
+With a single predictor model, we can easily see the effects through the model output.
+
+The logistic regression will be on the logit scale. 
+
+```{r}
+summary(m1)
+```
+
+
+## interpreting size of effects in logistic regression
+
+The model output says that the prime trial_type has an estimate 3.55 higher than non-prime. Crucially, this estimate is on the *logit* scale (remember the link = logit?). So the interpretation is that prime trials had 3.55 times higher logged odds than non-prime. 
+
+It can be difficult to interpret logged values, so we can turn the logit (or log odds) into an odds ratio. Understanding odds ratio is a direct increase in odds. 
+
+These logits can be transformed to odds ratios by exponentiation of them manually, using the `exp()` function. 
+
+We could simply write `exp(3.5515)` and review the output. We get 34.8, which we can round to 35 and interpret as:
+
+> prime trials have a 35 times greater odds of being associated with a stranded preposition when compared to non-prime trials.
+
+That is a *huge* effect, by the way. There is very strong statistical evidence that prime trials are causing stranded preposition production, or, more generally, that linguistic alignment is occurring. **It is at this point worth looking back at Table 2 in the paper** - ignore the frequency of 0s, and instead look how many 1s occur in prime trials versus non-prime trials. Does this strong statistical effect make sense in light of the descriptive data? 
+
+```{r}
+exp(3.5515)
+```
+## interpreting r2 of the model
+
+The `model_performance()` function from the `performance` package provides R2 and other measures of model fit. 
+
+- The marginal R2 shows variance explained via fixed factors only.
+- The condition R2 shows variance explained by fixed + random.
+- Marginal is what matters in terms of the effects of the variables, but the variance explained by random effects is certainly also of interest. 
+
+```{r}
+performance::model_performance(m1)
+```
+
+## plotting model effects quickly using `emmip`
+
+The `emmip` function from `emmeans` is a quick way to plot effects from a fit model. Compare the type = 'response' arguments.
+
+When logistic regression is converted to logits, it ranges from -4 (never) to 4 (always). The default plot is to show the logits - note that -4 is the bottom range for priming in the non-prime condition:
+
+```{r}
+emmip(m1, ~ trial_type)
+```
+
+Converting to `reponse` will transform the y axis into our original variable (i.e., 0 to 1). And here we can interpret the y axis as predicted probabilities, ranging from 0% to 100%. 
+
+```{r}
+emmip(m1, ~ trial_type, type = 'response')
+```
+
+We can obtain the text version of the plot using emmeans
+
+```{r}
+emmeans(m1, ~ trial_type, type = 'response')
+```
+
+# Add modality as another predictor
+
+Starting with `trial_type` gives us confidence that alingment is occuring! But we also want to know if the extent of alignment is different between FTF and SCMC groups. 
+
+Time to start building up the model so that it can answer our research questions. We need to add `modality` in order to compare the degree of alignment between FTF and SCMC groups.
+
+Add a second predictor of modality:
+
+```{r}
+# fit a second model with modality as a fixed effect
+m2 <- glmer(score ~ trial_type + modality +  (1|subject) + (1|verb), data = model_dat, family = binomial(link = 'logit'))
+```
+
+A model comparison allows a check of whether including that additional variable creates a "better" fitting model. A modal comparison can be done using the `anova()` function. The `anova()` function will perform a log likelihood test to see which model has a better "fit". Here we see adding `modality` creates a better model. 
+
+```{r}
+anova(m1, m2)
+```
+
+We can also see that the R2 of this model is higher (.352) compared to m1 (.321), which is further evidence of a better model fit. 
+
+```{r}
+performance::model_performance(m2)
+```
+
+And the presence of a significant effect for `modality` further gives us reason why this is a better model fit. What is this effect telling us? 
+
+```{r}
+summary(m2)
+```
+
+## Understanding the effect of modality 
+
+Plotting is *always* a good idea so that you understand what the model output is actually saying. 
+
+This `emmip` call asks for a comparison between the two groups, taking into account trial type. 
+
+What does this plot suggest about our data and effects?
+
+```{r}
+emmip(m2, ~ modality, type = 'response')
+```
+Although we did not ask for an interaction in the model, `emmeans` has no problem showing us the interaction. We can use the `|` to mean `by`. This function says "show me the predicted probability of priming for modality by trial type"
+
+```{r}
+emmip(m2, ~ modality|trial_type, type = 'response')
+```
+The same effect can be seen in the `emmeans` call
+
+```{r}
+emmeans(m2, ~ modality | trial_type, type = 'response')
+```
+
+## pairwise comparisons
+
+the `pairs` function from emmeans will provide the pairwise contrasts of your formula (assuming your variables are categorical).
+
+Notice that doing so automatically provides us with the odds ratio - this is because of asking for the variable on the response scale. Otherwise we get the logits (which match the model summary output!!)
+
+#### compare trial types:
+
+```{r}
+# model logit scale
+pairs(emmeans(m2,  ~ trial_type))
+```
+
+
+```{r}
+# original response scale
+pairs(emmeans(m2,  ~ trial_type, type = 'response'))
+```
+
+#### compare modality:
+
+```{r}
+pairs(emmeans(m2,  ~ modality, type = 'response'))
+```
+
+#### compare modality | trial_type
+
+`emmeans` allows us to compare predictions at different levels and interactions, which is what the `|` is doing in the call below. Yet we see the same effect in both cases. Why? Because we did not fit an interaction into the model. 
+
+```{r}
+pairs(emmeans(m2, ~ trial_type | modality, type = 'response'))
+
+pairs(emmeans(m2, ~ modality | trial_type, type = 'response'))
+```
+
+
+# Add the modality*type interaction
+
+So regardless of what emmeans gives us, we do need to actually fit and assess the interaction in the model. 
+
+Add the session * trial_type interaction to the model and assess if it provides a good fit. 
+
+```{r}
+m3 <- glmer(score ~ trial_type*modality +  (1|subject) + (1|verb), data = model_dat, family = binomial(link = 'logit'))
+```
+
+It's an even *better* model. These are the kinds of p-values you would want to include when discussing whether a specific term or interaction is significant. But, this also becomes more and more complicated as you create larger and larger models. 
+
+```{r}
+anova(m2, m3)
+```
+
+Our r2 goes down a bit - likely because the new combination of our variables are not actually explaining more variance (think about the cost of including the interaction term for `modality` in the non-prime condition versus the new information it provides.). The good news is, we care much more about our predictor strength than the R2, but at the same time a model with really low R2 might make us question its predictive strength. 
+
+```{r}
+performance::model_performance(m3)
+```
+
+## understanding the interaction
+
+Unlike `m1` and `m2`, we can no longer understand all of the effects from the model summary alone. The significant effects in this output are misleading and can leave to confusion without careful interpretation. It is far easier to use `emmeans` to unpack the model. 
+
+```{r}
+summary(m3)
+```
+
+First use `emmip` to run the interaction plot. It is *very* similar to the m2 plot we ran above, but there are slight differences in the predictions. 
+
+```{r}
+emmip(m3, ~ modality|trial_type, type = 'response')
+```
+
+This will obtain for us the actual contrasts between the two 
+
+```{r}
+emmeans(m3, pairwise ~ modality | trial_type, type = 'response')
+```
+
+Can we recreate the published plot? 
+
+First, extract the emmeans estimates and save them to a data frame. 
+
+```{r}
+priming_plot <- as.data.frame(emmeans(m3, pairwise ~ modality | trial_type, type = 'response')$emmeans)
+```
+
+Here is a quick re-creation of the plot. What is different about this plot when compared to the published version?
+
+- this one is on the probability scale
+- this one has error bars
+
+Which plot would be easier to explain to an audience? 
+
+- `geom_line()` draws a line between the points, the `group` argument tells the line where to join
+- `geom_errobar()` plots errorbars / confidence intervals on the points
+- `theme_classic()` is one of many options
+
+```{r}
+# uncomment the lines to see the final plot, but you need to add a "+" after the geoms to join them. 
+ggplot(priming_plot, aes(y = prob, x = trial_type, group = modality, lty = modality)) + 
+  geom_point() 
+   #  geom_line() 
+   # geom_errorbar(aes(ymin = asymp.LCL, ymax = asymp.UCL), width = .1) 
+   # theme_classic() 
+   # labs(x = '', y = 'predicted probability')
+
+```
+
+# What about the other variables?
+
+What about all the other stuff, like control variables of `session` and `trial order`, as well as individual difference variables such as `wmc`, `prod_pre`, `cloze`, and `rec_pre`?
+
+- do we think that these variables will interact with `modality`?
+- do we think that these variables will interact with `trial type`? 
+
+You could perform individual model tests with these variables to see if they add on to our effects of primary interest
+You could use a backfitting algorithm such as `buildmer` or convenience functions in `lmerTest` (this is what we did in the paper)
+You could simply fit these variables and interpret the entire model with them included, as they were part of your RQ/hypotheses. 
+
+**there is no easy answer!**
+
+because the paper included a significant effect of receptive knowledge, let's fit that variable.
+
+
+## receptive knowledge scores
+
+It is good practice to standardize numerical predictors in a regression. Primarily for interpretation. You can read a tutorial I wrote on z-scores here: https://www.stephenskalicky.com/zed-scores.html
+
+Below, a new variable `rec_pre_z` is created, which is the result of calling `scale()` on `rec_pre`. The `scale()` function will provide z-scores if you have scale and center set to TRUE:
+
+```{r}
+model_dat$rec_pre_z <- scale(model_dat$rec_pre, scale = TRUE, center = TRUE)
+```
+
+Fit an interaction between trial type and receptive knowledge score:
+
+```{r}
+m4 <- glmer(score ~ trial_type*modality + trial_type*rec_pre_z +  (1|subject) + (1|verb), data = model_dat, family = binomial(link = 'logit'))
+```
+
+Model comparison - does it make for a better model fit? It's a bit of an unfair comparison because we would probably first need to test for receptive knowledge as a main effect and then as an interaction, but you get the idea here. 
+
+```{r}
+anova(m3, m4)
+```
+
+A higher R2 again!
+
+```{r}
+performance::model_performance(m4)
+```
+
+Because `rec_pre_z` is a continuous variable, we can directly interpret it from the model output. Here, it shows that a one-unit increase in rec_pre_z is associated with an increase of 0.2594 log odds for prime trials compared to non-prime trials. 
+
+Nonetheless, it is still easier to use emmeans to understand and plot the interactions. 
+
+```{r}
+summary(m4)
+```
+
+## plotting the continuous interaction
+It's always a bit more annoying to plot a continuous variable - `emmip()` will by default give us the predictions when the variable is set to its mean, which is zero because it was z-scored. Note that the output for `emmip()` is telling us to change things in order to see more than one value
+
+```{r}
+emmip(m4, ~ rec_pre_z|trial_type, type = 'response')
+```
+
+We can ask `emmip` to plot the predictions at different levels of `rec_pre_z`. One easy way is to use `cov.reduce = FALSE`
+
+The `CI = T` tells `emmip()` to include the confidence intervals, which is always a good thing. 
+
+```{r}
+# cov.reduce = FALSE tells emmip not to reduce the covariate into a single prediction.
+
+emmip(m4, ~ rec_pre_z|trial_type, type = 'response', cov.reduce = FALSE, CI = T)
+```
+
+We can convert the `emmip()` output into a dataframe for plotting, we need to use the `plotit = F` argument
+
+Also add modality to the data
+
+```{r}
+receptive_plot <- emmip(m4, ~ rec_pre_z|c(modality,trial_type), type = 'response', cov.reduce = FALSE, CI = T, plotit = F)
+
+```
+
+Now we can make a much prettier plot - the `emmip` output includes the handy `yvar` and `xvar` which we can pop into the y/x axes.
+
+- the plot is faceted around trial type - making one panel for each type
+- the `color` and `fill` arguments in the `aes()` call inform the plot to group aspects of the geoms by modlity. 
+- `geom_point()` plots each of the predicted probabilities at different levels of receptive knowledge
+- `geom_line()` draws a line joining the points - the `group = modality` in the first `aes()` call tells ggplot how to connect these lines. 
+- `geom_ribbon()` creates a shaded region showing the errorbars around the estimates
+- the `\n` in the x-axis label is a newline character which creates the newlines for the label
+
+
+### what is this plot showing us?
+
+- does the probability of priming increase as receptive knowledge increases for non-prime trials?
+- does the probability of priming increase as receptive knowledge increases for prime trials?
+- is the direction of the effect for prime trials different between FTF/SCMC?
+
+
+```{r}
+# uncomment the lines to see the final plot, but you need to add a "+" after each geom!
+ggplot(receptive_plot, aes(y = yvar, x = xvar, group = modality, color = modality, fill = modality)) + 
+  facet_wrap(. ~ trial_type) + 
+   geom_point() 
+ #  geom_line() 
+ #  geom_ribbon(aes(ymin = LCL, ymax = UCL), alpha = .2) 
+ # #  #this geom draws a line at 0, which is the mean value of receptive pretest scores.
+ #  geom_vline(xintercept = 0, lty = 'dashed', color = 'black') 
+ #  theme_bw() 
+ #  labs(y = 'predicted probability', x = 'receptive knowledge\nz-scored', caption = 'dashed line = mean of receptive knowledge score') 
+ #  theme(legend.position = 'bottom')
+```
+
+### how do I report the "significance" of the continuous variable?
+
+You could do a model comparison with and without the variable (already done above), and report the chisquare and p value of that test. 
+
+You can also use the `emtrends()` function, which tests whether the degree of the slope (i.e., the negative or positive trend of the effect) is significantly different from zero.
+
+We run emtrends twice - the first time alone to get the 95% confidence intervals, then wrapped in `test()` to get p values. 
+
+```{r}
+# get confidence intervals
+emtrends(m4, ~ rec_pre_z|c(trial_type), var = 'rec_pre_z')
+
+# get p values
+test(emtrends(m4, ~ rec_pre_z|c(trial_type), var = 'rec_pre_z'))
+```
+
+# Plenty more to do...
+
+If you're keen, have a go trying to build this model up even more. For example, the paper also included these effects:
+
+- there were no significant effects for wmc, cloze, or production pretest scores
+- priming was stronger for prime trials in session 2 when compared to session 1 (no interaction between modality)
+- strength of priming increased with higher trial order for prime trials
+- try plotting some of the non-significant continuous effects. do these plots look different than the receptive knowledge plot?
+- There is a need to also test random slopes. A random slope of trial_type on subjects was also included in the final paper. This would be fit using the syntax
+```
+(1+trial_type|subject)
+```
+You could try adding that to the model (add it to the existing random effect) and using a model comparison to see if it makes for a better fit. 

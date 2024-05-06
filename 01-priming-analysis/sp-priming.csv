@@ -1,4 +1,4 @@
-subject,verb,score,modality,test,trial_order,session,type,cloze,wmc,prod_pre,rec_pre
+subject,verb,score,modality,test,trial_order,session,trial_type,cloze,wmc,prod_pre,rec_pre
 1,pet,0,FTF,priming1,12,session1,non-prime,40,74,0,6
 1,organize,0,FTF,priming1,9,session1,prime,40,74,0,6
 1,burn,0,FTF,priming1,10,session1,non-prime,40,74,0,6

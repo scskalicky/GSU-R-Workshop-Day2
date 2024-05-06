@@ -5,7 +5,7 @@ The priming data is in the file `sp-priming.csv`, with these columns and variabl
 variable|type|explanation
 :-:|:-:|:-:
 `score`|dependent variable| whether participant produced the target structure (1) or not (0)
-`type` | independent variable | the trial type, whether it was a prime (containing a stranded preposition) or control (no stranded preposition)
+`trial_type` | independent variable | the trial type, whether it was a prime (containing a stranded preposition) or control (no stranded preposition)
 `modality` | independent variable | whether participant was in an FTF or SCMC context
 `wmc` | independent variable | particpant's working memory capacity score 
 `prod_pre` | independent variable | participant's pretest production score (production test)

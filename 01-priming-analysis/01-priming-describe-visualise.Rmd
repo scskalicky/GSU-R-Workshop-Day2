@@ -1,0 +1,125 @@
+---
+title: "priming-describe-visualise"
+author: "Stephen Skalicky"
+output: html_document
+---
+
+# visualise the priming data
+
+In this notebook, the priming data is visualised and described. The priming data is in the form of count data - how many times did the participants produce a stranded preposition. So instead of calculating mean and standard deviations, we can instead provide raw frequency counts in the different conditions. These can also be converted into percentages. 
+
+
+## Load in the data
+
+Load in the `tidyverse` package, and then readin the data using the `read_csv()` function. Call the data `dat`
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+dat <- read_csv('sp-priming.csv')
+```
+
+## Recreate Table 2 of frequency counts
+
+In the published paper, Table 2 displays the raw frequency counts of produced/not produced among for FTF and SCMC after prime and filler trials, as well as during the first or second session. 
+
+We can re-create this table using a `group_by()` and `summarise()` pipe. Inside the `summarise()` function, use the `n()` function, which does a tally of items in any condition.
+
+Below, the `group_by()` includes `trial_type` (prime vs. filler), `modality` (FTF vs. SCMC), `session` (first or second), and perhaps most importantly, `score` (0 not produed, 1 produced)
+
+You could use `write_csv()` to then write this as a table, and rearrange them into the same format used in the final paper. 
+
+```{r}
+# descriptives of primes
+priming_frequencies <- dat %>%
+  group_by(trial_type, modality, session, score) %>%
+  summarise(frequency = n())
+
+priming_frequencies
+```
+
+## Plot the frequencies
+
+The published paper did not include a figure of these frequencies, but we can make one here for practice.
+
+Also, doing so reminds us that we need to be careful with numbers in R - although we understand that score is a binary variable (can only be 0 or 1), R will see this variable as a continuous variable:
+
+```{r}
+summary(dat$score)
+```
+
+The solution is to convert the score into a categorical variable, known in R as a `factor`.
+
+The easiest way to do this is to use the `factor()` function. In the code cell below, I assign a new column named `binary_score` to `dat`, which is the result of calling `factor()` on score: 
+
+```{r}
+dat$binary_score <- factor(dat$score)
+```
+
+Compare the differences between continuous version and binary version. 
+
+```{r}
+summary(dat$score)
+summary(dat$binary_score)
+```
+
+### plot score using `geom_bar()`
+
+The `geom_bar()` geom is used to create bar charts. On its own, `geom_bar()` will count the number of instances of something, which we can see here. This is controlled by the "stat" argument in `geom_bar()`, which default is set to `'count'`
+
+The size of the bars will correspond to the frequency of 0s and 1s in the data
+
+```{r}
+ggplot(dat, aes(x = binary_score)) + 
+  geom_bar()
+```
+If you do not want `geom_bar()` to do automatic counting, use `stat = 'identity'`, but then we also must give it both an x and a y axis (as well as a number rather than a factor). Below, the plot is showing us the true identity of our variables, and we get the total sum of the accuracy variable in each trial condition - not very useful. Think about it, this is showing us the total sum of the 1s and 0s - we only know the total frequency of 1s and no information is given about the 0s. 
+
+```{r}
+ggplot(dat, aes(y = score, x = trial_type)) + 
+  geom_bar(stat = 'identity')
+```
+
+So let's keep it set to the default and count the frequency of our accuracy variable in each condition. We also add `fill = modality`. The default option for filled bars is to stack them.
+
+```{r}
+ggplot(dat, aes(x = binary_score, fill = modality)) + 
+  geom_bar()
+```
+add a `position = position_dodge()` argument to remove the stacking. 
+
+```{r}
+ggplot(dat, aes(x = binary_score, fill = modality)) + 
+  geom_bar(position = position_dodge())
+```
+
+What information is still missing? We want to incorporate `trial_type` (prime or filler). We can use a facet wrap to do so, asking for everything to be wrapped by `trial_type`. 
+
+```{r}
+ggplot(dat, aes(x = binary_score, fill = modality)) + 
+  # wrap everything (.) by (~) trial_type
+  facet_wrap(. ~ trial_type) + 
+  geom_bar(position = position_dodge())
+```
+
+Finally, we can wrap by `session` as well, reorganizing the plot so things are arranged in a way that makes sense using `facet_grid` rather than wrap. I also add styling and labels. 
+
+[pause and interpret the figure. what do we see?] 
+
+  - look at plot with and without session in the facet call
+
+```{r}
+ggplot(dat, aes(x = binary_score, fill = trial_type, lty = trial_type)) + 
+  # using grid allows us to put labels on the side
+  facet_grid(. ~ modality) + 
+  # make bars semi-transparent and smaller
+  geom_bar(position = position_dodge(), alpha = .8, width = .6) + 
+  theme_bw() + 
+  labs(x = 'primed production\n', y = 'frequency') + 
+  # remove legend title (making it blank) and move legend to the bottom
+  theme(legend.title = element_blank(), legend.position = 'bottom')
+```
+
+After this, let's move onto creating the statistical model for this data. 
